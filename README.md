@@ -25,7 +25,7 @@ npm install
 npx hexo server
 ```
 
-浏览器访问 `www.abyssa1.com` 即可预览。
+浏览器访问 `www.abyssa1.cloud` 即可预览。
 
 ## License
 
