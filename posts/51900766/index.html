@@ -1,0 +1,701 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析 | 乃敢与君绝</title><meta name="author" content="abyssa1"><meta name="copyright" content="abyssa1"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="穿透、击穿、雪崩，是每一个用 Redis 的人迟早要撞上的三道坎。本文重点讲前两个的 Go 实现——布隆过滤器挡穿透、singleflight 挡击穿，并逐行拆解 singleflight 的 Do 内部实现。雪崩只列方法。   一、先分清三个名词这三个词极易混淆，但根因和解法完全不同：    名字 现象 根因 解法    缓存穿透 查一个根本不存在的数据，缓存永远不命中，每次都打库 请求的 k">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析">
+<meta property="og:url" content="https://www.abyssa1.cloud/posts/51900766/index.html">
+<meta property="og:site_name" content="乃敢与君绝">
+<meta property="og:description" content="穿透、击穿、雪崩，是每一个用 Redis 的人迟早要撞上的三道坎。本文重点讲前两个的 Go 实现——布隆过滤器挡穿透、singleflight 挡击穿，并逐行拆解 singleflight 的 Do 内部实现。雪崩只列方法。   一、先分清三个名词这三个词极易混淆，但根因和解法完全不同：    名字 现象 根因 解法    缓存穿透 查一个根本不存在的数据，缓存永远不命中，每次都打库 请求的 k">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.abyssa1.cloud/img/hexo_avator1.jpeg">
+<meta property="article:published_time" content="2026-11-09T13:18:23.000Z">
+<meta property="article:modified_time" content="2026-11-09T13:22:54.349Z">
+<meta property="article:author" content="abyssa1">
+<meta property="article:tag" content="redis">
+<meta property="article:tag" content="八股">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://www.abyssa1.cloud/img/hexo_avator1.jpeg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析",
+  "url": "https://www.abyssa1.cloud/posts/51900766/",
+  "image": "https://www.abyssa1.cloud/img/hexo_avator1.jpeg",
+  "datePublished": "2026-11-09T13:18:23.000Z",
+  "dateModified": "2026-11-09T13:22:54.349Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "abyssa1",
+      "url": "https://www.abyssa1.cloud"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://www.abyssa1.cloud/posts/51900766/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: abyssa1","link":"链接: ","source":"来源: 乃敢与君绝","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/hexo_avator1.jpeg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 列表</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友情链接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我们</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/background.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/butterfly-icon.png" alt="Logo"><span class="site-name">乃敢与君绝</span></a><a class="nav-page-title" href="/"><span class="site-name">Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 列表</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友情链接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我们</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-11-09T13:18:23.000Z" title="发表于 2026-11-09 21:18:23">2026-11-09</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-11-09T13:22:54.349Z" title="更新于 2026-11-09 21:22:54">2026-11-09</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3.5k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>12分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><blockquote>
+<p>穿透、击穿、雪崩，是每一个用 Redis 的人迟早要撞上的三道坎。<br>本文重点讲前两个的 Go 实现——布隆过滤器挡穿透、singleflight 挡击穿，并逐行拆解 singleflight 的 <code>Do</code> 内部实现。雪崩只列方法。</p>
+</blockquote>
+<hr>
+<h2 id="一、先分清三个名词"><a href="#一、先分清三个名词" class="headerlink" title="一、先分清三个名词"></a>一、先分清三个名词</h2><p>这三个词极易混淆，但根因和解法完全不同：</p>
+<table>
+<thead>
+<tr>
+<th>名字</th>
+<th>现象</th>
+<th>根因</th>
+<th>解法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>缓存穿透</strong></td>
+<td>查一个<strong>根本不存在</strong>的数据，缓存永远不命中，每次都打库</td>
+<td>请求的 key 在 DB 里也没有</td>
+<td>空值缓存、<strong>布隆过滤器</strong></td>
+</tr>
+<tr>
+<td><strong>缓存击穿</strong></td>
+<td><strong>一个热点 key 恰好过期</strong>的瞬间，海量并发同时打库</td>
+<td>同一个 key 的并发请求没被合并</td>
+<td>互斥锁、<strong>singleflight</strong></td>
+</tr>
+<tr>
+<td><strong>缓存雪崩</strong></td>
+<td><strong>大批 key 同时过期</strong>，或 Redis 整个挂了</td>
+<td>TTL 集中 + 没有降级</td>
+<td>TTL 加随机、多级缓存、限流降级</td>
+</tr>
+</tbody></table>
+<p>一句话概括它们的区别：</p>
+<ul>
+<li><strong>穿透</strong>是「查的东西根本不存在」，打库的是<strong>无效请求</strong>。</li>
+<li><strong>击穿</strong>是「热点 key 刚到期」，打库的是<strong>同一份数据的重复请求</strong>。</li>
+<li><strong>雪崩</strong>是「一大批 key 同时死」，打库的是<strong>海量正常请求</strong>。</li>
+</ul>
+<p>下面重点展开前两个。</p>
+<hr>
+<h2 id="二、缓存穿透与布隆过滤器"><a href="#二、缓存穿透与布隆过滤器" class="headerlink" title="二、缓存穿透与布隆过滤器"></a>二、缓存穿透与布隆过滤器</h2><h3 id="2-1-穿透是怎么发生的"><a href="#2-1-穿透是怎么发生的" class="headerlink" title="2.1 穿透是怎么发生的"></a>2.1 穿透是怎么发生的</h3><p>攻击者（或正常业务）不断请求一个数据库中不存在的 id，比如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GET /product/99999999    # 这个 id 压根不存在</span><br></pre></td></tr></table></figure>
+
+<p>请求到达后：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">查 Redis   → 没有（因为从来没缓存过，也不会有）</span><br><span class="line">查 MySQL   → 没有</span><br><span class="line">回填缓存   → 没东西可填（总不能把 nil 存进去）</span><br></pre></td></tr></table></figure>
+
+<p>于是<strong>每一次</strong>这样的请求都会穿透缓存、打到数据库。恶意刷一大波不存在的 id，就能把 MySQL 压垮。</p>
+<h3 id="2-2-两个解法"><a href="#2-2-两个解法" class="headerlink" title="2.2 两个解法"></a>2.2 两个解法</h3><p><strong>解法一：空值缓存。</strong> 查到不存在时，往 Redis 里存一个短 TTL 的空标记（比如 <code>&quot;&quot;</code> 或一个特殊值），下次来就能挡住。缺点是每个不存在的 key 都要占一份内存，而且攻击者可以换着 id 刷，挡不住。</p>
+<p><strong>解法二：布隆过滤器。</strong> 在 Redis 前面加一道「可能存在」的快速判断，把不存在的 key 直接拦在缓存之外。这是本文的重点。</p>
+<h3 id="2-3-布隆过滤器的原理"><a href="#2-3-布隆过滤器的原理" class="headerlink" title="2.3 布隆过滤器的原理"></a>2.3 布隆过滤器的原理</h3><p>布隆过滤器（Bloom Filter）是一个「<strong>说没有就一定没有，说有不一定有</strong>」的概率数据结构。它由两部分组成：</p>
+<ul>
+<li>一个长度为 m 的<strong>位数组</strong>，初始全 0；</li>
+<li>k 个<strong>哈希函数</strong>，每个都能把元素映射到位数组的某个下标。</li>
+</ul>
+<p><strong>写入</strong>：元素进来，用 k 个哈希函数算出 k 个下标，把这 k 个位置全部置 1。</p>
+<p><strong>查询</strong>：同样算出这 k 个下标，检查：</p>
+<ul>
+<li>只要<strong>有一个位置是 0</strong> → 元素<strong>一定不存在</strong>（因为存在的话这 k 位早被置 1 了）；</li>
+<li><strong>全部都是 1</strong> → 元素<strong>可能存在</strong>（可能是真存在，也可能是别的元素把这几位占了，叫<strong>误判</strong>）。</li>
+</ul>
+<p>关键性质：</p>
+<ol>
+<li><strong>不会漏报</strong>（False Negative 为 0）——存在的一定会被判为可能存在；</li>
+<li><strong>可能误报</strong>（False Positive 非 0）——不存在的可能被误判为可能存在；</li>
+<li><strong>只增不删</strong>——位数组一旦置 1 就回不去，删除单个元素很难（需要计数布隆）。</li>
+</ol>
+<p>为什么会有误判？因为位数组长度有限，多个元素共享同一个位。比如「商品 A」和「商品 B」都命中了第 5 位，那查一个从没写入过的「商品 C」时，如果它的 k 个下标恰好都被 A、B 覆盖了，就会被误判为「可能存在」。</p>
+<p>误判率可以由<strong>位数组大小 m、哈希函数个数 k、元素个数 n</strong> 三者控制：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">k = (m/n) * ln2        # 最优哈希函数个数</span><br><span class="line">误判率 ≈ (1 - e^(-kn/m))^k</span><br></pre></td></tr></table></figure>
+
+<p>m 越大、n 越少，误判率越低。工程上通常把误判率控制在 1% 甚至 0.1%。</p>
+<h3 id="2-4-布隆过滤器的-Go-实现"><a href="#2-4-布隆过滤器的-Go-实现" class="headerlink" title="2.4 布隆过滤器的 Go 实现"></a>2.4 布隆过滤器的 Go 实现</h3><p>标准库没有布隆过滤器，用 <code>github.com/bits-and-blooms/bloom</code> 这个成熟库（它同时也是很多知名项目的依赖）：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> <span class="string">&quot;github.com/bits-and-blooms/bloom&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 预计算：n 是预计元素数量，fp 是目标误判率</span></span><br><span class="line">filter := bloom.NewWithEstimates(n, fp)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 写入：数据预热时，把 DB 里所有合法 id 灌进去</span></span><br><span class="line">filter.Add([]<span class="type">byte</span>(<span class="string">&quot;product:1001&quot;</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment">// 查询：请求进来先问过滤器</span></span><br><span class="line"><span class="keyword">if</span> !filter.Test([]<span class="type">byte</span>(<span class="string">&quot;product:99999999&quot;</span>)) &#123;</span><br><span class="line">    <span class="comment">// 一定不存在，直接拒绝，连 Redis 都不用查</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span>, errNotFound</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 可能存在，走正常缓存 → DB 流程</span></span><br></pre></td></tr></table></figure>
+
+<p>在业务里它通常挂在 Redis 前面，配合 Redis 的布隆过滤器模块（RedisBloom）或本地预加载：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">请求 → 布隆过滤器.Test</span><br><span class="line">            ├── 返回 false → 一定不存在，直接拒绝（挡住穿透）</span><br><span class="line">            └── 返回 true  → 查 Redis →（miss）→ 查 DB</span><br></pre></td></tr></table></figure>
+
+<p>如果你不想引第三方库，自己实现一个也很快，核心就 20 行左右：一个 <code>[]byte</code> 位数组 + 两个哈希函数（比如 <code>fnv</code> 和 <code>murmur</code>，或同一个哈希加两个盐）。但生产建议直接用 <code>bits-and-blooms/bloom</code>，它处理了哈希函数个数和位数组的调优。</p>
+<p><strong>布隆过滤器的边界</strong>：它只能告诉你「可能不存在」，一旦误判，请求还是会打到 DB（只是概率很低）。而且数据有增删时，过滤器需要同步维护，删除尤其麻烦。所以它适合「读多、key 集合相对稳定」的场景。</p>
+<hr>
+<h2 id="三、缓存击穿与-singleflight"><a href="#三、缓存击穿与-singleflight" class="headerlink" title="三、缓存击穿与 singleflight"></a>三、缓存击穿与 singleflight</h2><p>穿透挡的是「不存在的请求」，击穿挡的是「存在的请求太多」——这是两个方向的问题，解法也完全不同。</p>
+<h3 id="3-1-击穿是怎么发生的"><a href="#3-1-击穿是怎么发生的" class="headerlink" title="3.1 击穿是怎么发生的"></a>3.1 击穿是怎么发生的</h3><p>假设 <code>product:1001</code> 是个秒杀商品，QPS 5000，TTL 30 分钟。时间线：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">T=0.000s   Redis 里 key 到期，被删除</span><br><span class="line">T=0.001s   100 个请求进来，全部 cache miss</span><br><span class="line">T=0.002s   100 个 goroutine 同时执行 SELECT ... WHERE id=1001</span><br><span class="line">T=0.200s   100 条一样的结果返回，100 次 Set 回 Redis（99 次是白写的）</span><br></pre></td></tr></table></figure>
+
+<p>根因在于：<strong>缓存回填有延迟（一次 DB 查询的耗时），在这段窗口里，后来者仍然看不到缓存。</strong> 所以「先查缓存、没有再查库、再回填」这套标准 Cache-Aside 流程，在<strong>并发</strong>下是有洞的——它默认了「我查库的时候别人不会查」。</p>
+<p>要补这个洞，思路只有一条：<strong>让同一个 key 的并发请求合并，只放一个去查库。</strong> Go 里现成的工具就是 <code>golang.org/x/sync/singleflight</code>。</p>
+<h3 id="3-2-正常业务里的用法"><a href="#3-2-正常业务里的用法" class="headerlink" title="3.2 正常业务里的用法"></a>3.2 正常业务里的用法</h3><p>先看最核心的调用方式，就三行：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> <span class="string">&quot;golang.org/x/sync/singleflight&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> g singleflight.Group <span class="comment">// 全局一个，不要每个请求 new</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GetUser</span><span class="params">(id <span class="type">string</span>)</span></span> <span class="type">string</span> &#123;</span><br><span class="line">    v, _, _ := g.Do(id, <span class="function"><span class="keyword">func</span><span class="params">()</span></span> (any, <span class="type">error</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> queryDB(id), <span class="literal">nil</span>   <span class="comment">// 同一个 id 只有一个 goroutine 能执行到这里</span></span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="keyword">return</span> v.(<span class="type">string</span>)             <span class="comment">// Do 返回 any，断言回原类型</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>四个要点：</p>
+<ol>
+<li><strong><code>Group</code> 全局一个</strong>。它是去重作用域，每个请求 <code>new</code> 一个就等于没写。</li>
+<li><strong><code>key</code> 要一致</strong>。同一份数据必须用同一个 key，通常直接用缓存 key（<code>&quot;product:&quot;+id</code>）。</li>
+<li><strong><code>fn</code> 签名固定</strong>是 <code>func() (any, error)</code>，因为 <code>any</code> 能装任何类型。</li>
+<li><strong>取回来要断言</strong>。<code>v.(*Product)</code>，忘了会 panic。</li>
+</ol>
+<p>对比一下效果（100 个并发请求打同一个 id）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">不用 singleflight    100 个并发请求 → 查库 100 次</span><br><span class="line">用 singleflight       100 个并发请求 → 查库   1 次</span><br></pre></td></tr></table></figure>
+
+<p>把它嵌进真实的 Cache-Aside 流程里，就是：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *Service)</span></span> GetProduct(ctx context.Context, id <span class="type">string</span>) (*Product, <span class="type">error</span>) &#123;</span><br><span class="line">    key := <span class="string">&quot;product:&quot;</span> + id</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 1. 先查缓存</span></span><br><span class="line">    <span class="keyword">if</span> p, ok := s.fromCache(ctx, key); ok &#123;</span><br><span class="line">        <span class="keyword">return</span> p, <span class="literal">nil</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 未命中，交给 singleflight 合并回源</span></span><br><span class="line">    v, err, _ := s.sf.Do(key, <span class="function"><span class="keyword">func</span><span class="params">()</span></span> (any, <span class="type">error</span>) &#123;</span><br><span class="line">        <span class="comment">// 双检：排队期间别人可能已经回填了</span></span><br><span class="line">        <span class="keyword">if</span> p, ok := s.fromCache(ctx, key); ok &#123;</span><br><span class="line">            <span class="keyword">return</span> p, <span class="literal">nil</span></span><br><span class="line">        &#125;</span><br><span class="line">        p := s.db.Get(id)          <span class="comment">// 同一个 key 只有一个 goroutine 走到这</span></span><br><span class="line">        s.toCache(ctx, key, p)     <span class="comment">// 回填</span></span><br><span class="line">        <span class="keyword">return</span> p, <span class="literal">nil</span></span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> v.(*Product), <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-内部实现：逐行拆解-Do"><a href="#3-3-内部实现：逐行拆解-Do" class="headerlink" title="3.3 内部实现：逐行拆解 Do"></a>3.3 内部实现：逐行拆解 <code>Do</code></h3><p>singleflight 的核心结构非常短，就一个 map + 一把锁 + 每个 key 一个 WaitGroup：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// call 代表&quot;一个 key 正在进行中（或刚完成）的一次调用&quot;</span></span><br><span class="line"><span class="keyword">type</span> call <span class="keyword">struct</span> &#123;</span><br><span class="line">    wg sync.WaitGroup</span><br><span class="line"></span><br><span class="line">    val any   <span class="comment">// 结果</span></span><br><span class="line">    err <span class="type">error</span> <span class="comment">// 错误</span></span><br><span class="line"></span><br><span class="line">    dups  <span class="type">int</span>              <span class="comment">// 有多少个请求&quot;蹭&quot;了这次调用</span></span><br><span class="line">    chans []<span class="keyword">chan</span>&lt;- Result  <span class="comment">// DoChan 的等待者</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Group 是去重作用域</span></span><br><span class="line"><span class="keyword">type</span> Group <span class="keyword">struct</span> &#123;</span><br><span class="line">    mu sync.Mutex       <span class="comment">// 保护 m</span></span><br><span class="line">    m  <span class="keyword">map</span>[<span class="type">string</span>]*call <span class="comment">// 所谓&quot;飞行表&quot;，懒初始化</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注意 <code>call</code> 的字段被分成了两组，用两种不同的机制保护：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>保护机制</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>val</code>、<code>err</code></td>
+<td><strong>WaitGroup 的 happens-before</strong>，不用锁</td>
+<td>Done 之前只写一次，之后只读</td>
+</tr>
+<tr>
+<td><code>dups</code>、<code>chans</code></td>
+<td><strong><code>Group.mu</code> 互斥锁</strong></td>
+<td>多个 follower 会并发 <code>dups++</code></td>
+</tr>
+</tbody></table>
+<p>这是理解 singleflight 的钥匙：<strong>锁保护的是「登记」，WaitGroup 保护的是「结果传递」</strong>。</p>
+<p>再看 <code>Do</code> 本体：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span></span> Do(key <span class="type">string</span>, fn <span class="function"><span class="keyword">func</span><span class="params">()</span></span> (any, <span class="type">error</span>)) (v any, err <span class="type">error</span>, shared <span class="type">bool</span>) &#123;</span><br><span class="line">    <span class="comment">// ---------- 第一段：持锁，决定自己是 leader 还是 follower ----------</span></span><br><span class="line">    g.mu.Lock()</span><br><span class="line">    <span class="keyword">if</span> g.m == <span class="literal">nil</span> &#123;</span><br><span class="line">        g.m = <span class="built_in">make</span>(<span class="keyword">map</span>[<span class="type">string</span>]*call)   <span class="comment">// 懒初始化，零值 Group 可直接用</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> c, ok := g.m[key]; ok &#123;</span><br><span class="line">        <span class="comment">// 【follower 路径】已经有人在算了</span></span><br><span class="line">        c.dups++        <span class="comment">// 读-改-写三步不是原子操作，必须在锁内</span></span><br><span class="line">        g.mu.Unlock()   <span class="comment">// 登记完立刻放手，锁不能陪着我一起睡</span></span><br><span class="line">        c.wg.Wait()     <span class="comment">// 挂起，等 leader 的 wg.Done()</span></span><br><span class="line">        <span class="keyword">return</span> c.val, c.err, <span class="literal">true</span>   <span class="comment">// shared=true，这结果不是我算的</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 【leader 路径】没人算，我来</span></span><br><span class="line">    c := <span class="built_in">new</span>(call)</span><br><span class="line">    c.wg.Add(<span class="number">1</span>)         <span class="comment">// 计数置 1，代表&quot;有 1 个在飞&quot;</span></span><br><span class="line">    g.m[key] = c        <span class="comment">// 必须先登记再干活，否则会出现两个 leader</span></span><br><span class="line">    g.mu.Unlock()</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ---------- 第二段：不持锁，干活 ----------</span></span><br><span class="line">    g.doCall(c, key, fn)</span><br><span class="line">    <span class="keyword">return</span> c.val, c.err, c.dups &gt; <span class="number">0</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这段代码里藏着三个<strong>顺序不能颠倒</strong>的细节：</p>
+<ol>
+<li><strong><code>g.m[key] = c</code> 必须在 <code>Unlock</code> 之前。</strong> 顺序反了会有一个窗口，让第二个 goroutine 也查不到 key，于是出现两个 leader、重复查库——整个库就白用了。</li>
+<li><strong><code>g.mu.Unlock()</code> 必须在 <code>c.wg.Wait()</code> 之前。</strong> 锁在 <code>Wait</code> 前不放，leader 在 <code>doCall</code> 收尾时 <code>g.mu.Lock()</code> 就永远拿不到锁，直接死锁。</li>
+<li><strong><code>c.dups++</code> 必须在锁内。</strong> 多个 follower 会并发改这个字段，放锁外就是 data race（实测 100 万次自增会丢 26.78%）。</li>
+</ol>
+<p>最后看收尾的 <code>doCall</code>：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span></span> doCall(c *call, key <span class="type">string</span>, fn <span class="function"><span class="keyword">func</span><span class="params">()</span></span> (any, <span class="type">error</span>)) &#123;</span><br><span class="line">    v, err := fn()   <span class="comment">// 真正执行业务函数（先写值）</span></span><br><span class="line"></span><br><span class="line">    g.mu.Lock()</span><br><span class="line">    c.wg.Done()         <span class="comment">// 再唤醒所有 follower</span></span><br><span class="line">    <span class="keyword">if</span> g.m[key] == c &#123;  <span class="comment">// 判断不能省：可能有人中途 Forget 过</span></span><br><span class="line">        <span class="built_in">delete</span>(g.m, key) <span class="comment">// 摘掉 → 下一次 Do 会重新执行 fn</span></span><br><span class="line">    &#125;</span><br><span class="line">    g.mu.Unlock()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>两个要点：</p>
+<ul>
+<li><strong>先写 <code>val</code>、再 <code>Done</code>。</strong> 顺序反了 follower 被唤醒时读到的是零值。</li>
+<li><strong><code>if g.m[key] == c</code> 这个判断不能省。</strong> 有人中途调 <code>Forget(key)</code> 后，新的 goroutine 会往 map 里塞一个<strong>新的 call</strong>，此时无脑 <code>delete</code> 会误删新 call。</li>
+</ul>
+<p>而 <code>delete(g.m, key)</code> 这一行揭示了 singleflight 的本质：<strong>它不做缓存，结果只在「飞行期间」共享。</strong> fn 一返回，key 就从飞行表摘掉，下一次 <code>Do</code> 是全新的一次执行。它是<strong>去重</strong>，不是<strong>记忆</strong>。</p>
+<h3 id="3-4-三个必须知道的坑"><a href="#3-4-三个必须知道的坑" class="headerlink" title="3.4 三个必须知道的坑"></a>3.4 三个必须知道的坑</h3><ul>
+<li><strong><code>Do</code> 没有 context，进去就同步阻塞，超时控制不了。</strong> 要超时，用 <code>DoChan</code> + <code>select</code>：</li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">ch := g.DoChan(key, fn)</span><br><span class="line"><span class="keyword">select</span> &#123;</span><br><span class="line"><span class="keyword">case</span> r := &lt;-ch:</span><br><span class="line">    <span class="keyword">return</span> r.Val, r.Err</span><br><span class="line"><span class="keyword">case</span> &lt;-ctx.Done():</span><br><span class="line">    g.Forget(key)     <span class="comment">// 我不等了，也别让别人继续等这个慢调用</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span>, ctx.Err()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>超时后不 <code>Forget</code>，下一个请求还会撞上那个没跑完的慢调用。</strong> 上游超时 100ms、下游要 300ms，在 leader 跑完之前，这个 key 的所有请求都在陪葬。</li>
+<li><strong><code>fn</code> 里别用 leader 的 ctx。</strong> leader 一断开，DB 查询失败，所有 follower 陪着一起报错——哪怕他们自己的请求还好好的。用 <code>context.WithoutCancel(ctx)</code> 让这次计算独立跑完：</li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">fnCtx := context.WithoutCancel(ctx)</span><br><span class="line">ch := g.DoChan(key, <span class="function"><span class="keyword">func</span><span class="params">()</span></span> (any, <span class="type">error</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> s.db.Query(fnCtx, id)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-5-一个重要边界"><a href="#3-5-一个重要边界" class="headerlink" title="3.5 一个重要边界"></a>3.5 一个重要边界</h3><p>singleflight 只在<strong>单个进程内</strong>有效。<code>Group</code> 就是进程内的一块 map，跨 Pod 完全不共享。你部署 5 个实例，热点 key 过期照样 5 次查库。要跨实例去重，得上 Redis 分布式锁（<code>SETNX</code>）或「逻辑过期」方案——这是它最容易被忽视的边界。</p>
+<hr>
+<h2 id="四、缓存雪崩：几个解决方法（简述）"><a href="#四、缓存雪崩：几个解决方法（简述）" class="headerlink" title="四、缓存雪崩：几个解决方法（简述）"></a>四、缓存雪崩：几个解决方法（简述）</h2><p>雪崩是「一大批 key 同时过期」或「Redis 整个挂掉」导致的流量集中打库。常用的几个解法：</p>
+<ul>
+<li><strong>过期时间加随机抖动</strong>：给 TTL 加一个随机偏移，避免集中过期。</li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ttl := base + time.Duration(rand.Intn(<span class="number">300</span>))*time.Second</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>热点数据永不过期 + 逻辑过期</strong>：物理 TTL 设很大，在 value 里存一个「逻辑过期时间」，后台异步刷新。</li>
+<li><strong>多级缓存</strong>：本地缓存（如 <code>bigcache</code>&#x2F;<code>freecache</code>）+ Redis，Redis 挂了本地还能扛一层。</li>
+<li><strong>限流与降级</strong>：Redis 不可用时，接口降级返回默认值或直接熔断，保护 DB。</li>
+<li><strong>集群高可用</strong>：Redis 主从 + 哨兵 &#x2F; Cluster，避免单点整个挂掉。</li>
+</ul>
+<p>雪崩和击穿本质不同：击穿是「一个 key」的并发合并问题，雪崩是「一批 key + 一个中间件」的可用性问题，所以解法也不在一个维度上。</p>
+<hr>
+<h2 id="五、总结"><a href="#五、总结" class="headerlink" title="五、总结"></a>五、总结</h2><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>本质</th>
+<th>核心解法</th>
+<th>Go 里的工具</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>穿透</td>
+<td>查不存在的 key</td>
+<td>布隆过滤器 &#x2F; 空值缓存</td>
+<td><code>bits-and-blooms/bloom</code></td>
+</tr>
+<tr>
+<td>击穿</td>
+<td>热点 key 并发重复查</td>
+<td>合并同一 key 的请求</td>
+<td><code>x/sync/singleflight</code></td>
+</tr>
+<tr>
+<td>雪崩</td>
+<td>key 集中过期 &#x2F; Redis 挂</td>
+<td>TTL 抖动 &#x2F; 多级缓存 &#x2F; 降级</td>
+<td>工程手段</td>
+</tr>
+</tbody></table>
+<p>最后把 singleflight 再浓缩成一句话：</p>
+<blockquote>
+<p>一个 <code>map[string]*call</code> + 一把锁 + 每个 key 一个 <code>WaitGroup</code>。先到的当 leader 查库，后到的 <code>Wait</code> 等结果；leader 算完 <code>Done</code> 唤醒所有人，然后从表里删掉。它<strong>不缓存结果，只合并「正在进行中的同一份计算」</strong>。</p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.abyssa1.cloud">abyssa1</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.abyssa1.cloud/posts/51900766/">https://www.abyssa1.cloud/posts/51900766/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://www.abyssa1.cloud" target="_blank">乃敢与君绝</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/redis/">redis</a><a class="post-meta__tags" href="/tags/%E5%85%AB%E8%82%A1/">八股</a></div><div class="post-share"><div class="social-share" data-image="/img/hexo_avator1.jpeg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>如果您读文章后有收获，可以打赏我喝咖啡哦～</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechatpay.jpg" target="_blank"><img class="post-qr-code-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/wechatpay.jpg" alt="微信支付"/></a><div class="post-qr-code-desc">微信支付</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/alipay.jpg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/2af23362/" title="百度之星初赛补题记录"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">百度之星初赛补题记录</div></div><div class="info-2"><div class="info-item-1">比赛补题记录推荐补题顺序： 第 6 题 → 第 4 题 → 第 8 题 → 第 7 题  第 6 题：要求自己能够独立写出并 AC 第 4 题：理解思路后能够独立实现 第 8 题：重点学习核心转化，争取独立实现 第 7 题：作为进阶图论题学习   第 6 题：未竟之志时间限制：1 秒 | 空间限制：512 MB 题目描述赛场上有 n 根钢栏杆从左到右排成一排，第 i 根钢栏杆的助推值为 a[i]。 在正式投出椅子之前，小鹿可以至多进行一次调整：选择一根钢栏杆，将它从原来的位置取出，再插入到当前序列的任意位置。调整后钢栏杆的相对顺序按新的排列确定。 随后小鹿会选择连续的 5 根钢栏杆作为助跑轨道，并获得这 5 根钢栏杆助推值之和的分数。 请你帮助小鹿求出，他能获得的最大分数。 输入格式本题包含多组测试数据。第一行包含一个整数 T，表示测试数据的组数。 对于每组测试数据，第一行包含一个整数 n。第二行包含 n 个整数 a[1], a[2], …, a[n]，表示每根钢栏杆的助推值。 数据范围 1 ≤ T ≤ 2 × 10⁵ 5 ≤ n ≤ 2 × 10⁵ -10⁹ ≤ a[i] ≤ ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/134d9310/" title="Redis沙盒逃逸(CVE-2022-0543)漏洞复现"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-04-04</div><div class="info-item-2">Redis沙盒逃逸(CVE-2022-0543)漏洞复现</div></div><div class="info-2"><div class="info-item-1">一、漏洞描述Redis是著名的开源Key-Value数据库，其具备在沙箱中执行Lua脚本的能力。Debian以及Ubuntu发行版的源在打包Redis时，不慎在Lua沙箱中遗留了一个对象package，攻击者可以利用这个对象提供的方法加载动态链接库liblua里的函数，进而逃逸沙箱执行任意命令。 受影响版本：2.2 &lt;&#x3D; redis &lt; 5.0.132.2 &lt;&#x3D; redis &lt; 6.0.152.2 &lt;&#x3D; redis &lt; 6.2.5 二、环境准备下载Redis1.下载redis安装包：https://github.com/MSOpenTech/redis/releases 2.解压后进入该文件夹运行cmd命令后依次执行一以下命令：redis-server.exe redis.windows.conf redis-server --service-install redis.windows.conf重新打开一个该目录下的cmd窗口：redis-server --service-start然后测试是否可以使用redis：...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/hexo_avator1.jpeg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">abyssa1</div><div class="author-info-description">纵马踏花去，仗剑走天涯</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/shen060606"><i class="fab fa-github"></i><span>关注我</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">这是我的博客</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E5%85%88%E5%88%86%E6%B8%85%E4%B8%89%E4%B8%AA%E5%90%8D%E8%AF%8D"><span class="toc-number">1.</span> <span class="toc-text">一、先分清三个名词</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E7%BC%93%E5%AD%98%E7%A9%BF%E9%80%8F%E4%B8%8E%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8"><span class="toc-number">2.</span> <span class="toc-text">二、缓存穿透与布隆过滤器</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E7%A9%BF%E9%80%8F%E6%98%AF%E6%80%8E%E4%B9%88%E5%8F%91%E7%94%9F%E7%9A%84"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 穿透是怎么发生的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E4%B8%A4%E4%B8%AA%E8%A7%A3%E6%B3%95"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 两个解法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8%E7%9A%84%E5%8E%9F%E7%90%86"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 布隆过滤器的原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8%E7%9A%84-Go-%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.4.</span> <span class="toc-text">2.4 布隆过滤器的 Go 实现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E7%BC%93%E5%AD%98%E5%87%BB%E7%A9%BF%E4%B8%8E-singleflight"><span class="toc-number">3.</span> <span class="toc-text">三、缓存击穿与 singleflight</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%87%BB%E7%A9%BF%E6%98%AF%E6%80%8E%E4%B9%88%E5%8F%91%E7%94%9F%E7%9A%84"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 击穿是怎么发生的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E6%AD%A3%E5%B8%B8%E4%B8%9A%E5%8A%A1%E9%87%8C%E7%9A%84%E7%94%A8%E6%B3%95"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 正常业务里的用法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E5%86%85%E9%83%A8%E5%AE%9E%E7%8E%B0%EF%BC%9A%E9%80%90%E8%A1%8C%E6%8B%86%E8%A7%A3-Do"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 内部实现：逐行拆解 Do</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-%E4%B8%89%E4%B8%AA%E5%BF%85%E9%A1%BB%E7%9F%A5%E9%81%93%E7%9A%84%E5%9D%91"><span class="toc-number">3.4.</span> <span class="toc-text">3.4 三个必须知道的坑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-%E4%B8%80%E4%B8%AA%E9%87%8D%E8%A6%81%E8%BE%B9%E7%95%8C"><span class="toc-number">3.5.</span> <span class="toc-text">3.5 一个重要边界</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E7%BC%93%E5%AD%98%E9%9B%AA%E5%B4%A9%EF%BC%9A%E5%87%A0%E4%B8%AA%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95%EF%BC%88%E7%AE%80%E8%BF%B0%EF%BC%89"><span class="toc-number">4.</span> <span class="toc-text">四、缓存雪崩：几个解决方法（简述）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E6%80%BB%E7%BB%93"><span class="toc-number">5.</span> <span class="toc-text">五、总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/51900766/" title="Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析">Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析</a><time datetime="2026-11-09T13:18:23.000Z" title="发表于 2026-11-09 21:18:23">2026-11-09</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/2af23362/" title="百度之星初赛补题记录">百度之星初赛补题记录</a><time datetime="2026-09-19T16:00:00.000Z" title="发表于 2026-09-20 00:00:00">2026-09-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/ac35fad1/" title="记录一次 Fork 代码随想录仓库并提交 PR 的经历">记录一次 Fork 代码随想录仓库并提交 PR 的经历</a><time datetime="2026-09-03T03:40:49.000Z" title="发表于 2026-09-03 11:40:49">2026-09-03</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/a3916b69/" title="rag_knowledge_go部署到云服务器上">rag_knowledge_go部署到云服务器上</a><time datetime="2026-07-15T12:23:59.000Z" title="发表于 2026-07-15 20:23:59">2026-07-15</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/f478f92c/" title="字节飞书后端一面凉经">字节飞书后端一面凉经</a><time datetime="2026-07-13T09:56:59.000Z" title="发表于 2026-07-13 17:56:59">2026-07-13</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By abyssa1</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><script src="https://cdn.jsdelivr.net/npm/instant.page@5.2.0/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload@19.1.3/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (false) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div>
+        <style>
+            [bg-lazy] {
+                background-image: none !important;
+                background-color: #eee !important;
+            }
+        </style>
+        <script>
+            window.imageLazyLoadSetting = {
+                isSPA: false,
+                preloadRatio: 1,
+                processImages: null,
+            };
+        </script><script>window.addEventListener("load",function(){var t=/\.(gif|jpg|jpeg|tiff|png)$/i,r=/^data:image\/[a-z\d\-\.\+]+;base64,/;Array.prototype.slice.call(document.querySelectorAll("img[data-original]")).forEach(function(a){var e=a.parentNode;"A"===e.tagName&&(t.test(e.href)||r.test(e.href))&&(e.href=a.dataset.original)})});</script><script>(r=>{r.imageLazyLoadSetting.processImages=t;var a=r.imageLazyLoadSetting.isSPA,o=r.imageLazyLoadSetting.preloadRatio||1,d=i();function i(){var t=Array.prototype.slice.call(document.querySelectorAll("img[data-original]")),e=Array.prototype.slice.call(document.querySelectorAll("[bg-lazy]"));return t.concat(e)}function t(t){(a||t)&&(d=i());for(var e,n=0;n<d.length;n++)0<=(e=(e=d[n]).getBoundingClientRect()).bottom&&0<=e.left&&e.top<=(r.innerHeight*o||document.documentElement.clientHeight*o)&&(()=>{var t,e,a,o,i=d[n];e=function(){d=d.filter(function(t){return i!==t}),r.imageLazyLoadSetting.onImageLoaded&&r.imageLazyLoadSetting.onImageLoaded(i)},(t=i).dataset.loaded||(t.hasAttribute("bg-lazy")?(t.removeAttribute("bg-lazy"),e&&e()):(a=new Image,o=t.getAttribute("data-original"),a.onload=function(){t.src=o,t.removeAttribute("data-original"),t.setAttribute("data-loaded",!0),e&&e()},a.onerror=function(){t.removeAttribute("data-original"),t.setAttribute("data-loaded",!1),t.src=o},t.src!==o&&(a.src=o)))})()}function e(){clearTimeout(t.tId),t.tId=setTimeout(t,500)}t(),document.addEventListener("scroll",e),r.addEventListener("resize",e),r.addEventListener("orientationchange",e)})(this);</script></body></html>
