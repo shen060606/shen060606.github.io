@@ -1,0 +1,646 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>安徽羚通科技 golang 面经 | 乃敢与君绝</title><meta name="author" content="abyssa1"><meta name="copyright" content="abyssa1"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="2026-11-17，腾讯会议，约 40 分钟，无手撕。面试官全程问计算机基础和 Go 语言，挖了一点项目 bg：安徽大学信息安全，主 Go，有两个项目（RAG 问答系统、资产扫描器）。  个人情况 自我介绍 现在大几、什么时候毕业 专业课学过什么、什么时候学的 信息安全方向学了什么 什么是跨域 为什么选 Go、怎么走到这个方向 Go 基础掌握到什么程度 除了 Go 还学过什么 Redis 用过吗">
+<meta property="og:type" content="article">
+<meta property="og:title" content="安徽羚通科技 golang 面经">
+<meta property="og:url" content="https://www.abyssa1.cloud/posts/70ab05b8/index.html">
+<meta property="og:site_name" content="乃敢与君绝">
+<meta property="og:description" content="2026-11-17，腾讯会议，约 40 分钟，无手撕。面试官全程问计算机基础和 Go 语言，挖了一点项目 bg：安徽大学信息安全，主 Go，有两个项目（RAG 问答系统、资产扫描器）。  个人情况 自我介绍 现在大几、什么时候毕业 专业课学过什么、什么时候学的 信息安全方向学了什么 什么是跨域 为什么选 Go、怎么走到这个方向 Go 基础掌握到什么程度 除了 Go 还学过什么 Redis 用过吗">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.abyssa1.cloud/img/hexo_avator1.jpeg">
+<meta property="article:published_time" content="2026-11-18T09:00:23.000Z">
+<meta property="article:modified_time" content="2026-11-18T09:36:24.468Z">
+<meta property="article:author" content="abyssa1">
+<meta property="article:tag" content="golang">
+<meta property="article:tag" content="面经">
+<meta property="article:tag" content="安徽羚通科技">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://www.abyssa1.cloud/img/hexo_avator1.jpeg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "安徽羚通科技 golang 面经",
+  "url": "https://www.abyssa1.cloud/posts/70ab05b8/",
+  "image": "https://www.abyssa1.cloud/img/hexo_avator1.jpeg",
+  "datePublished": "2026-11-18T09:00:23.000Z",
+  "dateModified": "2026-11-18T09:36:24.468Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "abyssa1",
+      "url": "https://www.abyssa1.cloud"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://www.abyssa1.cloud/posts/70ab05b8/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: abyssa1","link":"链接: ","source":"来源: 乃敢与君绝","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '安徽羚通科技 golang 面经',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/hexo_avator1.jpeg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 列表</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友情链接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我们</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/background.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/butterfly-icon.png" alt="Logo"><span class="site-name">乃敢与君绝</span></a><a class="nav-page-title" href="/"><span class="site-name">安徽羚通科技 golang 面经</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-list"></i><span> 列表</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友情链接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于我们</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">安徽羚通科技 golang 面经</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-11-18T09:00:23.000Z" title="发表于 2026-11-18 17:00:23">2026-11-18</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-11-18T09:36:24.468Z" title="更新于 2026-11-18 17:36:24">2026-11-18</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>13分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>2026-11-17，腾讯会议，约 40 分钟，无手撕。面试官全程问计算机基础和 Go 语言，挖了一点项目</p>
+<p>bg：安徽大学信息安全，主 Go，有两个项目（RAG 问答系统、资产扫描器）。</p>
+<hr>
+<h2 id="个人情况"><a href="#个人情况" class="headerlink" title="个人情况"></a>个人情况</h2><ol>
+<li>自我介绍</li>
+<li>现在大几、什么时候毕业</li>
+<li>专业课学过什么、什么时候学的</li>
+<li>信息安全方向学了什么</li>
+<li>什么是跨域</li>
+<li>为什么选 Go、怎么走到这个方向</li>
+<li>Go 基础掌握到什么程度</li>
+<li>除了 Go 还学过什么</li>
+<li>Redis 用过吗、到什么程度</li>
+</ol>
+<h2 id="Go-语言基础"><a href="#Go-语言基础" class="headerlink" title="Go 语言基础"></a>Go 语言基础</h2><ol>
+<li><code>int</code> 占几个字节</li>
+<li>数组能用 <code>==</code> 比较吗</li>
+<li>切片能用 <code>==</code> 比较吗</li>
+<li>切片的底层结构</li>
+<li>切片和数组的区别</li>
+<li>表是怎么创建的</li>
+<li>更新字段为什么改不动</li>
+<li>Go 命名规则、何时用驼峰</li>
+<li>JSON 字段命名用什么格式</li>
+<li>JSON 怎么解析、标签怎么写</li>
+</ol>
+<h2 id="计算机网络"><a href="#计算机网络" class="headerlink" title="计算机网络"></a>计算机网络</h2><ol>
+<li>计网学到哪了</li>
+<li>OSI 几层、TCP&#x2F;IP 几层</li>
+<li>二层有哪些设备</li>
+<li>数据链路层负责什么</li>
+<li>IP 怎么找到 MAC</li>
+<li>网络层负责什么</li>
+<li>公网 IP 和内网 IP 的区别</li>
+<li>内网怎么访问公网</li>
+<li>DNS 解析完整过程</li>
+<li>递归查询和迭代查询的区别</li>
+<li><code>127.0.0.1</code> 和 <code>localhost</code> 的区别</li>
+</ol>
+<h2 id="项目与工具"><a href="#项目与工具" class="headerlink" title="项目与工具"></a>项目与工具</h2><ol>
+<li>端口扫描怎么实现的</li>
+<li>怎么判断端口是没服务、超时，还是别的情况</li>
+<li>用过哪些抓包工具</li>
+<li>TCP 的包怎么抓、用什么抓</li>
+<li>泛域名（泛解析）是什么</li>
+<li>什么是 RESTful API</li>
+<li>Dockerfile 关键指令</li>
+</ol>
+<h2 id="反问"><a href="#反问" class="headerlink" title="反问"></a>反问</h2><ol>
+<li>Go 在你们业务里用在哪</li>
+</ol>
+<hr>
+<h2 id="题目答案"><a href="#题目答案" class="headerlink" title="题目答案"></a>题目答案</h2><h3 id="5-什么是跨域"><a href="#5-什么是跨域" class="headerlink" title="5. 什么是跨域"></a>5. 什么是跨域</h3><p>根源是浏览器的同源策略：协议、域名、端口三者完全一致才算同源，不同源的请求默认被拦截。</p>
+<p>关键一点：同源策略拦的是”读取响应”，不是”发出请求”。请求能发出去，只是脚本读不到返回内容——这正是 CSRF 能成立的原理。</p>
+<p>放行靠 CORS：服务端在响应头返回 <code>Access-Control-Allow-Origin</code>；非简单请求（PUT、DELETE、带自定义头、<code>Content-Type: application/json</code>）浏览器会先发一次 <code>OPTIONS</code> 预检，服务端要回 <code>Allow-Methods</code>、<code>Allow-Headers</code>；要带 Cookie 还需 <code>Access-Control-Allow-Credentials: true</code>，且此时 Origin 不能写成 <code>*</code>。</p>
+<p>其他方案：反向代理把前后端做到同源、<code>postMessage</code>、老的 JSONP（只支持 GET，已淘汰）。</p>
+<h3 id="9-Redis-用过吗、到什么程度"><a href="#9-Redis-用过吗、到什么程度" class="headerlink" title="9. Redis 用过吗、到什么程度"></a>9. Redis 用过吗、到什么程度</h3><p>Cache-Aside 模式：Embedding 算完按 <code>emb:&#123;model&#125;:&#123;sha256(text)&#125;</code> 写入，TTL 七天；读时先查 Redis，命中直接用，未命中再调模型并回填，重复文档和重复提问不重复花钱。另外做过简单限流和会话状态。</p>
+<p>缓存一致性：改数据先更新库再删缓存（不是更新缓存），删除失败用延迟双删兜底；防缓存穿透（空值也缓存短 TTL 或布隆过滤器）、防雪崩（过期时间加随机抖动）。</p>
+<h3 id="10-int-占几个字节"><a href="#10-int-占几个字节" class="headerlink" title="10. int 占几个字节"></a>10. <code>int</code> 占几个字节</h3><p><code>int</code> 跟平台走，32 位平台 4 字节，64 位平台 8 字节，规范只保证至少 32 位。要固定宽度用 <code>int32</code> &#x2F; <code>int64</code>。<code>unsafe.Sizeof(int(0))</code> 能直接验。</p>
+<p>两个相关的坑：<code>int</code> 和 <code>int64</code> 之间不能隐式转换，要显式 <code>int64(x)</code>；32 位上 <code>int</code> 只有约 21 亿，存纳秒时间戳会溢出。顺带记住：<code>string</code> 是 16 字节描述符，<code>bool</code> 1 字节，<code>byte</code> 是 <code>uint8</code> 别名，<code>rune</code> 是 <code>int32</code> 别名。</p>
+<h3 id="11-数组能用-比较吗"><a href="#11-数组能用-比较吗" class="headerlink" title="11. 数组能用 == 比较吗"></a>11. 数组能用 <code>==</code> 比较吗</h3><p>数组<strong>可以</strong>。元素可比较就能逐元素比，前提是两个数组类型完全相同——长度是类型的一部分，<code>[3]int</code> 和 <code>[4]int</code> 不是一个类型，比不了。数组是值类型，赋值传参都是整体拷贝。</p>
+<h3 id="12-切片能用-比较吗"><a href="#12-切片能用-比较吗" class="headerlink" title="12. 切片能用 == 比较吗"></a>12. 切片能用 <code>==</code> 比较吗</h3><p>切片<strong>不行</strong>。只能和 <code>nil</code> 比。它内部是指针 + len + cap 的引用结构，<code>==</code> 该比什么语义不清楚，语言直接禁了。要比内容用 <code>slices.Equal</code>（1.21 起）或 <code>bytes.Equal</code>。</p>
+<p>一起记：map 和 func 也只能和 <code>nil</code> 比；struct 里只要有一个不可比较的字段，整个 struct 就不可比较。</p>
+<h3 id="13-切片的底层结构"><a href="#13-切片的底层结构" class="headerlink" title="13. 切片的底层结构"></a>13. 切片的底层结构</h3><p><code>runtime.slice</code> 三个字段：指向底层数组的指针、<code>len</code>、<code>cap</code>，64 位下共 24 字节。切片本身是值类型，传参拷贝这 24 字节描述符，但底层数组共享，所以函数里改 <code>s[0]</code> 能改到外面。</p>
+<p><code>append</code> 一旦超过 <code>cap</code> 就分配新数组并拷贝，此后新旧切片不再共享——这就是”函数里 append 改不到外面”的原因。扩容策略：小切片翻倍，超过 256 之后约 1.25 倍。</p>
+<h3 id="14-切片和数组的区别"><a href="#14-切片和数组的区别" class="headerlink" title="14. 切片和数组的区别"></a>14. 切片和数组的区别</h3><table>
+<thead>
+<tr>
+<th></th>
+<th>数组</th>
+<th>切片</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>长度</td>
+<td>类型的一部分，编译期固定</td>
+<td>运行时可变</td>
+</tr>
+<tr>
+<td>赋值与传参</td>
+<td>整体拷贝</td>
+<td>拷贝描述符，共享底层数组</td>
+</tr>
+<tr>
+<td>可比较</td>
+<td>元素可比较则可 <code>==</code></td>
+<td>只能和 <code>nil</code> 比</td>
+</tr>
+<tr>
+<td>声明</td>
+<td><code>[3]int&#123;&#125;</code></td>
+<td><code>[]int&#123;&#125;</code> 或 <code>make([]int, 0, 8)</code></td>
+</tr>
+</tbody></table>
+<h3 id="15-表是怎么创建的"><a href="#15-表是怎么创建的" class="headerlink" title="15. 表是怎么创建的"></a>15. 表是怎么创建的</h3><p>GORM 的 <code>db.AutoMigrate(&amp;User&#123;&#125;)</code>，按结构体定义建表或补字段、索引；已存在的表不会删列、不会改列类型。生产环境改结构建议用 goose 或 golang-migrate 写版本化 SQL。</p>
+<p>命名默认约定：结构体名转蛇形再变复数（<code>User</code> 转 <code>users</code>），字段转蛇形（<code>CreatedAt</code> 转 <code>created_at</code>），主键认 <code>ID</code>，覆盖就实现 <code>TableName()</code>。</p>
+<h3 id="16-更新字段为什么改不动"><a href="#16-更新字段为什么改不动" class="headerlink" title="16. 更新字段为什么改不动"></a>16. 更新字段为什么改不动</h3><p>GORM 的 <code>Updates</code> 传结构体时零值会被忽略，0、空串、false 都不进 SQL。解法是用 map 传，或者用 <code>Select</code> 指定字段。</p>
+<p>分清 <code>Save</code> 和 <code>Updates</code>：<code>Save</code> 是全字段更新（零值也写，是 upsert），<code>Updates(User&#123;&#125;)</code> 只更新非零字段。用错了一个是”该改的没改”，一个是”不该清空的被清空”。批量更新记得加条件，GORM 不允许无 WHERE 的全表更新。</p>
+<h3 id="17-Go-命名规则、何时用驼峰"><a href="#17-Go-命名规则、何时用驼峰" class="headerlink" title="17. Go 命名规则、何时用驼峰"></a>17. Go 命名规则、何时用驼峰</h3><p>可见性靠首字母：大写导出、小写包内私有，没有 public&#x2F;private 关键字。命名统一用驼峰，不用下划线；缩写词连续大写（<code>userID</code>、<code>HTTPClient</code>、<code>URL</code>）；包名全小写、单词、不用复数。下划线开头没有特殊含义（和 Python 不同），<code>_</code> 用作占位符丢弃返回值。</p>
+<h3 id="18-JSON-字段命名用什么格式"><a href="#18-JSON-字段命名用什么格式" class="headerlink" title="18. JSON 字段命名用什么格式"></a>18. JSON 字段命名用什么格式</h3><p>结构体字段本身必须大写导出才能被序列化，对外的键名由 tag 决定：<code>json:&quot;user_name&quot;</code>。Go 生态惯例是 snake_case，前端常 camelCase，关键是全项目一致。</p>
+<p>不写 tag 时直接用字段原名，会输出 <code>UserName</code> 这种首字母大写的键，所以实际项目都显式写 tag。延伸：<code>json:&quot;-&quot;</code> 完全不序列化，<code>json:&quot;name,string&quot;</code> 把数字序列化成字符串（大整数传给前端避免精度丢失）。</p>
+<h3 id="19-JSON-怎么解析、标签怎么写"><a href="#19-JSON-怎么解析、标签怎么写" class="headerlink" title="19. JSON 怎么解析、标签怎么写"></a>19. JSON 怎么解析、标签怎么写</h3><p><code>encoding/json</code>。结构体转 JSON 用 <code>json.Marshal</code>，反向用 <code>json.Unmarshal</code>。标签用反引号：<code>json:&quot;user_name,omitempty&quot;</code>。</p>
+<p>两个点：<code>omitempty</code> 让零值字段整个消失，<code>status: 0</code> 这种业务有效值会丢，要保留就改用指针类型区分”未设置”和”明确为 0”；大整数默认解成 <code>float64</code>，超过 2^53 丢精度，改用 <code>json.Number</code> 或 <code>UseNumber()</code>。</p>
+<h3 id="21-OSI-几层、TCP-IP-几层"><a href="#21-OSI-几层、TCP-IP-几层" class="headerlink" title="21. OSI 几层、TCP&#x2F;IP 几层"></a>21. OSI 几层、TCP&#x2F;IP 几层</h3><p>OSI 七层：物理、数据链路、网络、传输、会话、表示、应用；TCP&#x2F;IP 四层：网络接口、网际、传输、应用；教材的五层是把物理和数据链路合起来。OSI 是理论模型，TCP&#x2F;IP 是工程实现。</p>
+<h3 id="22-二层有哪些设备"><a href="#22-二层有哪些设备" class="headerlink" title="22. 二层有哪些设备"></a>22. 二层有哪些设备</h3><p>网卡、集线器 Hub、网桥、交换机——都在第二层，交换机靠 MAC 地址表转发帧。网关不是二层设备，它工作在三层及以上（默认网关是路由器的一个接口）。三层设备是路由器和三层交换机。Hub 广播到所有端口，交换机按 MAC 表只发目标端口，所以交换机隔离冲突域。</p>
+<h3 id="23-数据链路层负责什么"><a href="#23-数据链路层负责什么" class="headerlink" title="23. 数据链路层负责什么"></a>23. 数据链路层负责什么</h3><p>四件事：封装成帧与解封装、MAC 寻址（源和目的 MAC）、差错检测（帧尾 FCS 用 CRC 校验，错了丢帧不重传）、介质访问控制（以太网用 CSMA&#x2F;CD）。交换机在这一层按目的 MAC 查表转发，VLAN 打标签也在这层。</p>
+<h3 id="24-IP-怎么找到-MAC"><a href="#24-IP-怎么找到-MAC" class="headerlink" title="24. IP 怎么找到 MAC"></a>24. IP 怎么找到 MAC</h3><p>用 ARP。同网段：主机广播 ARP Request”谁是 192.168.1.1，告诉我你的 MAC”，目标主机单播回 Reply，结果写进 ARP 缓存表（有老化时间）。跨网段：查的是默认网关的 MAC，帧目的 MAC 填网关，但 IP 头的目的 IP 仍是最终主机。IPv6 对应 NDP；ARP 没有认证，存在 ARP 欺骗和中间人攻击。</p>
+<h3 id="25-网络层负责什么"><a href="#25-网络层负责什么" class="headerlink" title="25. 网络层负责什么"></a>25. 网络层负责什么</h3><p>逻辑寻址、路由选择、分片与重组、ICMP 差错报告。设备是路由器、三层交换机；协议是 IP、ICMP、OSPF&#x2F;BGP。ARP 算二层三层的边界协议。</p>
+<h3 id="26-公网-IP-和内网-IP-的区别"><a href="#26-公网-IP-和内网-IP-的区别" class="headerlink" title="26. 公网 IP 和内网 IP 的区别"></a>26. 公网 IP 和内网 IP 的区别</h3><p>公网 IP 全球唯一，由 ISP 分配，能在互联网上被路由；内网 IP 只在局域网内有效，不能出现在公网路由表里，各局域网可重复使用。三个私网段：<code>10.0.0.0/8</code>、<code>172.16.0.0/12</code>、<code>192.168.0.0/16</code>；另有 <code>127.0.0.0/8</code> 回环、<code>169.254.0.0/16</code> 链路本地。</p>
+<h3 id="27-内网怎么访问公网"><a href="#27-内网怎么访问公网" class="headerlink" title="27. 内网怎么访问公网"></a>27. 内网怎么访问公网</h3><p>NAT，多台内网主机共享一个公网 IP 时是 NAPT，换 IP 还换端口。路由器维护映射表，把”内网 IP + 源端口”映射成”公网 IP + 端口”，回包按目的端口查表还原。反向的情况是 DNAT&#x2F;端口映射。</p>
+<p>反向代理是应用层（七层）的东西，按域名路径转发、还能终止 TLS 做负载均衡；NAT 是网络层，按地址端口转发，对应用透明。两者层次完全不同。</p>
+<h3 id="28-DNS-解析完整过程"><a href="#28-DNS-解析完整过程" class="headerlink" title="28. DNS 解析完整过程"></a>28. DNS 解析完整过程</h3><p>浏览器 DNS 缓存 → 操作系统缓存与 hosts 文件 → 本地 DNS 服务器 → 根服务器 → 顶级域服务器 → 权威服务器 → 拿到 A 记录逐级缓存返回。默认 UDP 53，响应超过 512 字节或区域传送走 TCP，可用 DoH&#x2F;DoT 加密。</p>
+<h3 id="29-递归查询和迭代查询"><a href="#29-递归查询和迭代查询" class="headerlink" title="29. 递归查询和迭代查询"></a>29. 递归查询和迭代查询</h3><p>区别在谁跑腿。递归是”你帮我问到最终结果”，本地 DNS 一路问到底，只回一个答案；迭代是”告诉我下一步问谁”，本地 DNS 问根、根只说”去问 .com”，一级一级自己跑。客户端对本地 DNS 是递归，本地 DNS 对上游是迭代，根和顶级域只做迭代不做递归。</p>
+<h3 id="30-127-0-0-1-和-localhost-的区别"><a href="#30-127-0-0-1-和-localhost-的区别" class="headerlink" title="30. 127.0.0.1 和 localhost 的区别"></a>30. <code>127.0.0.1</code> 和 <code>localhost</code> 的区别</h3><p>一个是地址，一个是名字。<code>127.0.0.1</code> 是写死的 IPv4 回环地址，整个 <code>127.0.0.0/8</code> 都是回环网段，数据包不出网卡。<code>localhost</code> 是主机名，靠 hosts 或 DNS 解析，通常配 <code>127.0.0.1</code>，但很多系统同时配了 <code>::1</code>。所以 <code>curl localhost</code> 有时走 IPv6 连不上（服务只监听 IPv4 时），<code>curl 127.0.0.1</code> 一定走 IPv4。</p>
+<h3 id="31-端口扫描怎么实现的"><a href="#31-端口扫描怎么实现的" class="headerlink" title="31. 端口扫描怎么实现的"></a>31. 端口扫描怎么实现的</h3><p>TCP connect 全连接扫描：直接 <code>Dial</code>，三次握手成功是 open，收 RST 是 closed，超时是 filtered。任务用 worker pool 分发，固定 N 个 goroutine 从 channel 取任务，配合 context 超时和信号量限速，避免打满文件描述符或触发目标防护。</p>
+<p>没做 SYN 半开扫描的原因：它自己发 SYN，收到 SYN-ACK 就判定开放后立刻发 RST，不完成握手，快且不进应用日志，但需要 raw socket 和 root 权限，跨平台麻烦，所以选了全连接。</p>
+<h3 id="32-怎么判断端口是没服务、超时，还是别的情况"><a href="#32-怎么判断端口是没服务、超时，还是别的情况" class="headerlink" title="32. 怎么判断端口是没服务、超时，还是别的情况"></a>32. 怎么判断端口是没服务、超时，还是别的情况</h3><p>端口扫描是三态不是两态：</p>
+<ul>
+<li>收到 <code>SYN-ACK</code> → open</li>
+<li>收到 <code>RST</code> → closed，很快返回，不走超时</li>
+<li>一直没回包等到超时 → filtered，只能说明”没回包”，<strong>不能等同于端口关闭</strong></li>
+</ul>
+<p>防火墙 DROP、主机不存在、路由不通，客户端看起来都一样，把超时当”端口没开”是常见错误简化。</p>
+<p>代码上别靠耗时猜，靠错误类型分：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">conn, err := net.DialTimeout(<span class="string">&quot;tcp&quot;</span>, addr, <span class="number">3</span>*time.Second)</span><br><span class="line"><span class="keyword">switch</span> &#123;</span><br><span class="line"><span class="keyword">case</span> err == <span class="literal">nil</span>:</span><br><span class="line">    <span class="comment">// open</span></span><br><span class="line">    conn.Close()</span><br><span class="line"><span class="keyword">case</span> errors.Is(err, syscall.ECONNREFUSED):</span><br><span class="line">    <span class="comment">// closed</span></span><br><span class="line"><span class="keyword">case</span> os.IsTimeout(err):</span><br><span class="line">    <span class="comment">// filtered</span></span><br><span class="line"><span class="keyword">default</span>:</span><br><span class="line">    <span class="comment">// 其他</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>两个坑：<code>iptables -j REJECT --reject-with tcp-reset</code> 会主动回 RST，看起来像端口关闭，其实是防火墙拒了，只有 <code>-j DROP</code> 才是超时；有些防火墙连 ICMP 一起丢，ping 不通但主机是活的，容易被误判成不存在。</p>
+<h3 id="33-用过哪些抓包工具"><a href="#33-用过哪些抓包工具" class="headerlink" title="33. 用过哪些抓包工具"></a>33. 用过哪些抓包工具</h3><p>Burp Suite（Web 渗透主力）、Charles（移动端 HTTPS 代理）、Wireshark（协议分析）、tcpdump（服务器命令行）。</p>
+<p>区分定位：Burp 是应用层代理，只能看经过它代理的 HTTP&#x2F;HTTPS，解 HTTPS 要装 CA 证书；Wireshark 是链路层抓包（基于 libpcap），看得到全部流量但 HTTPS 只能看到密文。”改接口参数、重放请求”用 Burp，”看 TCP 重传、握手异常”用 Wireshark。</p>
+<h3 id="34-TCP-的包怎么抓、用什么抓"><a href="#34-TCP-的包怎么抓、用什么抓" class="headerlink" title="34. TCP 的包怎么抓、用什么抓"></a>34. TCP 的包怎么抓、用什么抓</h3><p>工具分三类，不在一个层面：<code>tcpdump</code> 是命令行抓包，服务器上只能用它，直接写 pcap；<code>Wireshark</code> 是图形界面，用来读 pcap；Burp、Charles 是应用层代理，只能看经过代理的 HTTP&#x2F;HTTPS，抓不到任意 TCP。</p>
+<p>操作路径：选对网卡（选错是抓不到最常见的原因，VPN 选虚拟网卡，回环选 loopback）→ 捕获过滤器 <code>host 1.2.3.4 and tcp port 8080</code> → 显示过滤器 <code>tcp.flags.syn == 1</code> 找握手 → Follow TCP Stream 还原会话 → 存 pcap。</p>
+<p>抓不到的话排查：权限（Linux 要 root，Windows 装 Npcap + 管理员）、网卡选错、TSO&#x2F;GRO 导致超大包（<code>ethtool -K eth0 tso off gro off</code>）、HTTPS 只能看握手和长度（要解密导 <code>SSLKEYLOGFILE</code>）、是不是走了代理或 QUIC。</p>
+<h3 id="35-泛域名是什么"><a href="#35-泛域名是什么" class="headerlink" title="35. 泛域名是什么"></a>35. 泛域名是什么</h3><p>泛解析是把 <code>*.example.com</code> 全指到同一 IP。它决定子域名爆破怎么做：如果目标开了泛解析，字典里所有词都会”命中”，爆出来的全是假的。</p>
+<p>检测：拿一个肯定不存在的前缀去查，比如随机字符串，如果也解析成功就是有泛解析。应对：先探测有没有，有就把解析到同一 IP 的结果全过滤，再按 HTTP 内容（状态码、长度、标题）去重。泛解析常和 CDN 一起出现，还得做 CDN 识别、找真实源站。</p>
+<h3 id="36-什么是-RESTful-API"><a href="#36-什么是-RESTful-API" class="headerlink" title="36. 什么是 RESTful API"></a>36. 什么是 RESTful API</h3><p>一整套风格约束，不是协议也不是标准。五条：</p>
+<ol>
+<li>资源用名词做 URI，一般复数：<code>/users/1</code>，不是 <code>/getUser?id=1</code></li>
+<li>动作用 HTTP 方法表达：GET 查、POST 建、PUT 全量改、PATCH 局部改、DELETE 删</li>
+<li>无状态：每个请求自带全部信息</li>
+<li>表现层可协商：同一资源可返回 JSON 或 XML，靠 <code>Accept</code> 头协商</li>
+<li>用状态码表达结果：201 创建、204 无内容、400 参数错、401 未认证、403 无权限、404 不存在、409 冲突、500 服务端错误</li>
+</ol>
+<p>幂等性：GET&#x2F;PUT&#x2F;DELETE 幂等，POST 不幂等，所以支付下单要做幂等键。反例：<code>/getUserById</code>、<code>/deleteUserById</code> 把动词写进 URI 是 RPC 风格。</p>
+<h3 id="37-Dockerfile-关键指令"><a href="#37-Dockerfile-关键指令" class="headerlink" title="37. Dockerfile 关键指令"></a>37. Dockerfile 关键指令</h3><p><code>FROM</code> 基础镜像、<code>WORKDIR</code>、<code>COPY</code>、<code>RUN</code> 构建期执行、<code>ENV</code>&#x2F;<code>ARG</code> 环境变量、<code>EXPOSE</code> 声明端口、<code>CMD</code>&#x2F;<code>ENTRYPOINT</code> 启动命令、<code>USER</code> 降权限、<code>VOLUME</code>。</p>
+<p>优化：多阶段构建（builder 编译，运行阶段只拷二进制，镜像小一个数量级）、合并 RUN 减少层数、<code>.dockerignore</code>、基础镜像用 alpine 或 distroless。</p>
+<p><code>CMD</code> 和 <code>ENTRYPOINT</code> 的区别：<code>ENTRYPOINT</code> 是固定入口，<code>CMD</code> 提供默认参数且能被 <code>docker run</code> 后面的参数覆盖；一起用时 <code>CMD</code> 作为 <code>ENTRYPOINT</code> 的默认参数。</p>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>对第二个项目的准备不是很好，因为这段时间主要是完成第一个项目的，第二个项目的准备没有那么详细。<br>然后对这个计算机网络相关的内容还得掌握的再熟悉一点，因为这个岗位面试官跟我说实习生进去就是做网络相关的插件的</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.abyssa1.cloud">abyssa1</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.abyssa1.cloud/posts/70ab05b8/">https://www.abyssa1.cloud/posts/70ab05b8/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://www.abyssa1.cloud" target="_blank">乃敢与君绝</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/golang/">golang</a><a class="post-meta__tags" href="/tags/%E9%9D%A2%E7%BB%8F/">面经</a><a class="post-meta__tags" href="/tags/%E5%AE%89%E5%BE%BD%E7%BE%9A%E9%80%9A%E7%A7%91%E6%8A%80/">安徽羚通科技</a></div><div class="post-share"><div class="social-share" data-image="/img/hexo_avator1.jpeg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>如果您读文章后有收获，可以打赏我喝咖啡哦～</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wechatpay.jpg" target="_blank"><img class="post-qr-code-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/wechatpay.jpg" alt="微信支付"/></a><div class="post-qr-code-desc">微信支付</div></li><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/alipay.jpg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/51900766/" title="Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析</div></div><div class="info-2"><div class="info-item-1"> 穿透、击穿、雪崩，是每一个用 Redis 的人迟早要撞上的三道坎。本文重点讲前两个的 Go 实现——布隆过滤器挡穿透、singleflight 挡击穿，并逐行拆解 singleflight 的 Do 内部实现。雪崩只列方法。   一、先分清三个名词这三个词极易混淆，但根因和解法完全不同：    名字 现象 根因 解法    缓存穿透 查一个根本不存在的数据，缓存永远不命中，每次都打库 请求的 key 在 DB 里也没有 空值缓存、布隆过滤器   缓存击穿 一个热点 key 恰好过期的瞬间，海量并发同时打库 同一个 key 的并发请求没被合并 互斥锁、singleflight   缓存雪崩 大批 key 同时过期，或 Redis 整个挂了 TTL 集中 + 没有降级 TTL 加随机、多级缓存、限流降级   一句话概括它们的区别：  穿透是「查的东西根本不存在」，打库的是无效请求。 击穿是「热点 key 刚到期」，打库的是同一份数据的重复请求。 雪崩是「一大批 key 同时死」，打库的是海量正常请求。  下面重点展开前两个。  二、缓存穿透与布隆过滤器2.1 穿透是怎么发生的攻击者...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/friend_404.gif" data-original="/img/hexo_avator1.jpeg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">abyssa1</div><div class="author-info-description">纵马踏花去，仗剑走天涯</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/shen060606"><i class="fab fa-github"></i><span>关注我</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">这是我的博客</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%AA%E4%BA%BA%E6%83%85%E5%86%B5"><span class="toc-number">1.</span> <span class="toc-text">个人情况</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Go-%E8%AF%AD%E8%A8%80%E5%9F%BA%E7%A1%80"><span class="toc-number">2.</span> <span class="toc-text">Go 语言基础</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C"><span class="toc-number">3.</span> <span class="toc-text">计算机网络</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%A1%B9%E7%9B%AE%E4%B8%8E%E5%B7%A5%E5%85%B7"><span class="toc-number">4.</span> <span class="toc-text">项目与工具</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%8D%E9%97%AE"><span class="toc-number">5.</span> <span class="toc-text">反问</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%A2%98%E7%9B%AE%E7%AD%94%E6%A1%88"><span class="toc-number">6.</span> <span class="toc-text">题目答案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-%E4%BB%80%E4%B9%88%E6%98%AF%E8%B7%A8%E5%9F%9F"><span class="toc-number">6.1.</span> <span class="toc-text">5. 什么是跨域</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-Redis-%E7%94%A8%E8%BF%87%E5%90%97%E3%80%81%E5%88%B0%E4%BB%80%E4%B9%88%E7%A8%8B%E5%BA%A6"><span class="toc-number">6.2.</span> <span class="toc-text">9. Redis 用过吗、到什么程度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-int-%E5%8D%A0%E5%87%A0%E4%B8%AA%E5%AD%97%E8%8A%82"><span class="toc-number">6.3.</span> <span class="toc-text">10. int 占几个字节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-%E6%95%B0%E7%BB%84%E8%83%BD%E7%94%A8-%E6%AF%94%E8%BE%83%E5%90%97"><span class="toc-number">6.4.</span> <span class="toc-text">11. 数组能用 &#x3D;&#x3D; 比较吗</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-%E5%88%87%E7%89%87%E8%83%BD%E7%94%A8-%E6%AF%94%E8%BE%83%E5%90%97"><span class="toc-number">6.5.</span> <span class="toc-text">12. 切片能用 &#x3D;&#x3D; 比较吗</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#13-%E5%88%87%E7%89%87%E7%9A%84%E5%BA%95%E5%B1%82%E7%BB%93%E6%9E%84"><span class="toc-number">6.6.</span> <span class="toc-text">13. 切片的底层结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-%E5%88%87%E7%89%87%E5%92%8C%E6%95%B0%E7%BB%84%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">6.7.</span> <span class="toc-text">14. 切片和数组的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#15-%E8%A1%A8%E6%98%AF%E6%80%8E%E4%B9%88%E5%88%9B%E5%BB%BA%E7%9A%84"><span class="toc-number">6.8.</span> <span class="toc-text">15. 表是怎么创建的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#16-%E6%9B%B4%E6%96%B0%E5%AD%97%E6%AE%B5%E4%B8%BA%E4%BB%80%E4%B9%88%E6%94%B9%E4%B8%8D%E5%8A%A8"><span class="toc-number">6.9.</span> <span class="toc-text">16. 更新字段为什么改不动</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-Go-%E5%91%BD%E5%90%8D%E8%A7%84%E5%88%99%E3%80%81%E4%BD%95%E6%97%B6%E7%94%A8%E9%A9%BC%E5%B3%B0"><span class="toc-number">6.10.</span> <span class="toc-text">17. Go 命名规则、何时用驼峰</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-JSON-%E5%AD%97%E6%AE%B5%E5%91%BD%E5%90%8D%E7%94%A8%E4%BB%80%E4%B9%88%E6%A0%BC%E5%BC%8F"><span class="toc-number">6.11.</span> <span class="toc-text">18. JSON 字段命名用什么格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-JSON-%E6%80%8E%E4%B9%88%E8%A7%A3%E6%9E%90%E3%80%81%E6%A0%87%E7%AD%BE%E6%80%8E%E4%B9%88%E5%86%99"><span class="toc-number">6.12.</span> <span class="toc-text">19. JSON 怎么解析、标签怎么写</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#21-OSI-%E5%87%A0%E5%B1%82%E3%80%81TCP-IP-%E5%87%A0%E5%B1%82"><span class="toc-number">6.13.</span> <span class="toc-text">21. OSI 几层、TCP&#x2F;IP 几层</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-%E4%BA%8C%E5%B1%82%E6%9C%89%E5%93%AA%E4%BA%9B%E8%AE%BE%E5%A4%87"><span class="toc-number">6.14.</span> <span class="toc-text">22. 二层有哪些设备</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#23-%E6%95%B0%E6%8D%AE%E9%93%BE%E8%B7%AF%E5%B1%82%E8%B4%9F%E8%B4%A3%E4%BB%80%E4%B9%88"><span class="toc-number">6.15.</span> <span class="toc-text">23. 数据链路层负责什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#24-IP-%E6%80%8E%E4%B9%88%E6%89%BE%E5%88%B0-MAC"><span class="toc-number">6.16.</span> <span class="toc-text">24. IP 怎么找到 MAC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#25-%E7%BD%91%E7%BB%9C%E5%B1%82%E8%B4%9F%E8%B4%A3%E4%BB%80%E4%B9%88"><span class="toc-number">6.17.</span> <span class="toc-text">25. 网络层负责什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#26-%E5%85%AC%E7%BD%91-IP-%E5%92%8C%E5%86%85%E7%BD%91-IP-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">6.18.</span> <span class="toc-text">26. 公网 IP 和内网 IP 的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#27-%E5%86%85%E7%BD%91%E6%80%8E%E4%B9%88%E8%AE%BF%E9%97%AE%E5%85%AC%E7%BD%91"><span class="toc-number">6.19.</span> <span class="toc-text">27. 内网怎么访问公网</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#28-DNS-%E8%A7%A3%E6%9E%90%E5%AE%8C%E6%95%B4%E8%BF%87%E7%A8%8B"><span class="toc-number">6.20.</span> <span class="toc-text">28. DNS 解析完整过程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#29-%E9%80%92%E5%BD%92%E6%9F%A5%E8%AF%A2%E5%92%8C%E8%BF%AD%E4%BB%A3%E6%9F%A5%E8%AF%A2"><span class="toc-number">6.21.</span> <span class="toc-text">29. 递归查询和迭代查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#30-127-0-0-1-%E5%92%8C-localhost-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">6.22.</span> <span class="toc-text">30. 127.0.0.1 和 localhost 的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#31-%E7%AB%AF%E5%8F%A3%E6%89%AB%E6%8F%8F%E6%80%8E%E4%B9%88%E5%AE%9E%E7%8E%B0%E7%9A%84"><span class="toc-number">6.23.</span> <span class="toc-text">31. 端口扫描怎么实现的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#32-%E6%80%8E%E4%B9%88%E5%88%A4%E6%96%AD%E7%AB%AF%E5%8F%A3%E6%98%AF%E6%B2%A1%E6%9C%8D%E5%8A%A1%E3%80%81%E8%B6%85%E6%97%B6%EF%BC%8C%E8%BF%98%E6%98%AF%E5%88%AB%E7%9A%84%E6%83%85%E5%86%B5"><span class="toc-number">6.24.</span> <span class="toc-text">32. 怎么判断端口是没服务、超时，还是别的情况</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#33-%E7%94%A8%E8%BF%87%E5%93%AA%E4%BA%9B%E6%8A%93%E5%8C%85%E5%B7%A5%E5%85%B7"><span class="toc-number">6.25.</span> <span class="toc-text">33. 用过哪些抓包工具</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#34-TCP-%E7%9A%84%E5%8C%85%E6%80%8E%E4%B9%88%E6%8A%93%E3%80%81%E7%94%A8%E4%BB%80%E4%B9%88%E6%8A%93"><span class="toc-number">6.26.</span> <span class="toc-text">34. TCP 的包怎么抓、用什么抓</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#35-%E6%B3%9B%E5%9F%9F%E5%90%8D%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">6.27.</span> <span class="toc-text">35. 泛域名是什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#36-%E4%BB%80%E4%B9%88%E6%98%AF-RESTful-API"><span class="toc-number">6.28.</span> <span class="toc-text">36. 什么是 RESTful API</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#37-Dockerfile-%E5%85%B3%E9%94%AE%E6%8C%87%E4%BB%A4"><span class="toc-number">6.29.</span> <span class="toc-text">37. Dockerfile 关键指令</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">7.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/70ab05b8/" title="安徽羚通科技 golang 面经">安徽羚通科技 golang 面经</a><time datetime="2026-11-18T09:00:23.000Z" title="发表于 2026-11-18 17:00:23">2026-11-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/51900766/" title="Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析">Redis 缓存穿透、击穿、雪崩：Go 实战与 singleflight 源码解析</a><time datetime="2026-11-09T13:18:23.000Z" title="发表于 2026-11-09 21:18:23">2026-11-09</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/2af23362/" title="百度之星初赛补题记录">百度之星初赛补题记录</a><time datetime="2026-09-19T16:00:00.000Z" title="发表于 2026-09-20 00:00:00">2026-09-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/ac35fad1/" title="记录一次 Fork 代码随想录仓库并提交 PR 的经历">记录一次 Fork 代码随想录仓库并提交 PR 的经历</a><time datetime="2026-09-03T03:40:49.000Z" title="发表于 2026-09-03 11:40:49">2026-09-03</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/a3916b69/" title="rag_knowledge_go部署到云服务器上">rag_knowledge_go部署到云服务器上</a><time datetime="2026-07-15T12:23:59.000Z" title="发表于 2026-07-15 20:23:59">2026-07-15</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2020 - 2026 By abyssa1</span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><script src="https://cdn.jsdelivr.net/npm/instant.page@5.2.0/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload@19.1.3/dist/lazyload.iife.min.js"></script><div class="js-pjax"><script>(() => {
+  const parseViewBox = viewBox => {
+    if (!viewBox) return null
+    const parts = viewBox.trim().split(/[\s,]+/).map(n => Number(n))
+    if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) return null
+    return parts
+  }
+
+  const getSvgViewBox = svg => {
+    const attr = parseViewBox(svg.getAttribute('viewBox'))
+    if (attr) return attr
+
+    // Fallback: use bbox to build a viewBox
+    try {
+      const bbox = svg.getBBox()
+      if (bbox && bbox.width && bbox.height) return [bbox.x, bbox.y, bbox.width, bbox.height]
+    } catch (e) {
+      // getBBox may fail on some edge cases; ignore
+    }
+
+    const w = Number(svg.getAttribute('width')) || 0
+    const h = Number(svg.getAttribute('height')) || 0
+    if (w > 0 && h > 0) return [0, 0, w, h]
+    return [0, 0, 100, 100]
+  }
+
+  const setSvgViewBox = (svg, vb) => {
+    svg.setAttribute('viewBox', `${vb[0]} ${vb[1]} ${vb[2]} ${vb[3]}`)
+  }
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
+
+  const openSvgInNewTab = ({ source, initViewBox }) => {
+    const getClonedSvg = () => {
+      if (typeof source === 'string') {
+        const template = document.createElement('template')
+        template.innerHTML = source.trim()
+        const svg = template.content.querySelector('svg')
+        return svg ? svg.cloneNode(true) : null
+      }
+      if (source && typeof source.cloneNode === 'function') {
+        return source.cloneNode(true)
+      }
+      return null
+    }
+
+    const clone = getClonedSvg()
+    if (!clone) return
+    if (initViewBox && initViewBox.length === 4) {
+      clone.setAttribute('viewBox', initViewBox.join(' '))
+    }
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    if (!clone.getAttribute('xmlns:xlink') && clone.outerHTML.includes('xlink:')) {
+      clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    }
+    // inject background to match current theme
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const bg = getComputedStyle(document.body).backgroundColor || (isDark ? '#1e1e1e' : '#ffffff')
+    if (!clone.style.background) clone.style.background = bg
+
+    const serializer = new XMLSerializer()
+    const svgSource = serializer.serializeToString(clone)
+    const htmlSource = `<!doctype html><html><head><meta charset="utf-8" />
+      <style>
+        html, body { width: 100%; height: 100%; margin: 0; display: flex; align-items: center; justify-content: center; background: ${bg}; }
+        svg { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+      </style>
+      </head><body>${svgSource}</body></html>`
+    const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+
+  const attachMermaidViewerButton = wrap => {
+    let btn = wrap.querySelector('.mermaid-open-btn')
+    if (!btn) {
+      btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'mermaid-open-btn'
+      wrap.appendChild(btn)
+    }
+
+    btn.innerHTML = '<i class="fa fa-search fa-fw" aria-hidden="true"></i>'
+
+    if (!btn.__mermaidViewerBound) {
+      btn.addEventListener('click', e => {
+        e.preventDefault()
+        e.stopPropagation()
+        const svg = wrap.__mermaidOriginalSvg || wrap.querySelector('svg')
+        if (!svg) return
+        const initViewBox = wrap.__mermaidInitViewBox
+        if (typeof svg === 'string') {
+          openSvgInNewTab({ source: svg, initViewBox })
+          return
+        }
+        openSvgInNewTab({ source: svg, initViewBox })
+      })
+      btn.__mermaidViewerBound = true
+    }
+  }
+
+  // Zoom around a point (px, py) in the SVG viewport (in viewBox coordinates)
+  const zoomAtPoint = (vb, factor, px, py) => {
+    const w = vb[2] * factor
+    const h = vb[3] * factor
+    const nx = px - (px - vb[0]) * factor
+    const ny = py - (py - vb[1]) * factor
+    return [nx, ny, w, h]
+  }
+
+  const initMermaidGestures = wrap => {
+    const svg = wrap.querySelector('svg')
+    if (!svg) return
+
+    // Ensure viewBox exists so gestures always work
+    const initVb = getSvgViewBox(svg)
+    wrap.__mermaidInitViewBox = initVb
+    wrap.__mermaidCurViewBox = initVb.slice()
+    setSvgViewBox(svg, initVb)
+
+    // Avoid binding multiple times on themeChange/pjax
+    if (wrap.__mermaidGestureBound) return
+    wrap.__mermaidGestureBound = true
+
+    // Helper: map client (viewport) coordinate -> viewBox coordinate
+    const clientToViewBox = (clientX, clientY) => {
+      const rect = svg.getBoundingClientRect()
+      const vb = wrap.__mermaidCurViewBox || getSvgViewBox(svg)
+      const x = vb[0] + (clientX - rect.left) * (vb[2] / rect.width)
+      const y = vb[1] + (clientY - rect.top) * (vb[3] / rect.height)
+      return { x, y, rect, vb }
+    }
+
+    const state = {
+      pointers: new Map(),
+      startVb: null,
+      startDist: 0,
+      startCenter: null
+    }
+
+    const clampVb = vb => {
+      const init = wrap.__mermaidInitViewBox || vb
+      const minW = init[2] * 0.1
+      const maxW = init[2] * 10
+      const minH = init[3] * 0.1
+      const maxH = init[3] * 10
+      vb[2] = clamp(vb[2], minW, maxW)
+      vb[3] = clamp(vb[3], minH, maxH)
+      return vb
+    }
+
+    const setCurVb = vb => {
+      vb = clampVb(vb)
+      wrap.__mermaidCurViewBox = vb
+      setSvgViewBox(svg, vb)
+    }
+
+    const onPointerDown = e => {
+      // Allow only primary button for mouse
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      svg.setPointerCapture(e.pointerId)
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (state.pointers.size === 1) {
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      } else if (state.pointers.size === 2) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        state.startDist = Math.hypot(dx, dy)
+        state.startVb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        state.startCenter = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      }
+    }
+
+    const onPointerMove = e => {
+      if (!state.pointers.has(e.pointerId)) return
+      state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      // Pan with 1 pointer
+      if (state.pointers.size === 1 && state.startVb) {
+        const p = [...state.pointers.values()][0]
+        const prev = { x: e.clientX - e.movementX, y: e.clientY - e.movementY }
+        // movementX/Y unreliable on touch, compute from stored last position
+        const last = wrap.__mermaidLastSinglePointer || p
+        const dxClient = p.x - last.x
+        const dyClient = p.y - last.y
+        wrap.__mermaidLastSinglePointer = p
+
+        const { rect } = clientToViewBox(p.x, p.y)
+        const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+        const dx = dxClient * (vb[2] / rect.width)
+        const dy = dyClient * (vb[3] / rect.height)
+        setCurVb([vb[0] - dx, vb[1] - dy, vb[2], vb[3]])
+        return
+      }
+
+      // Pinch zoom with 2 pointers
+      if (state.pointers.size === 2 && state.startVb && state.startDist > 0) {
+        const pts = [...state.pointers.values()]
+        const dx = pts[0].x - pts[1].x
+        const dy = pts[0].y - pts[1].y
+        const dist = Math.hypot(dx, dy)
+        if (!dist) return
+        const factor = state.startDist / dist // dist bigger => zoom in (viewBox smaller)
+
+        const cx = (pts[0].x + pts[1].x) / 2
+        const cy = (pts[0].y + pts[1].y) / 2
+        const centerClient = { x: cx, y: cy }
+
+        const pxy = clientToViewBox(centerClient.x, centerClient.y)
+        const cpx = pxy.x
+        const cpy = pxy.y
+
+        const vb = zoomAtPoint(state.startVb, factor, cpx, cpy)
+        setCurVb(vb)
+      }
+    }
+
+    const onPointerUpOrCancel = e => {
+      state.pointers.delete(e.pointerId)
+      if (state.pointers.size === 0) {
+        state.startVb = null
+        state.startDist = 0
+        state.startCenter = null
+        wrap.__mermaidLastSinglePointer = null
+      } else if (state.pointers.size === 1) {
+        // reset single pointer baseline to avoid jump
+        wrap.__mermaidLastSinglePointer = [...state.pointers.values()][0]
+      }
+    }
+
+    // Wheel zoom (mouse/trackpad)
+    const onWheel = e => {
+      // ctrlKey on mac trackpad pinch; we treat both as zoom
+      e.preventDefault()
+      const delta = e.deltaY
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const { x, y } = clientToViewBox(e.clientX, e.clientY)
+      const vb = (wrap.__mermaidCurViewBox || getSvgViewBox(svg)).slice()
+      setCurVb(zoomAtPoint(vb, zoomFactor, x, y))
+    }
+
+    const onDblClick = () => {
+      const init = wrap.__mermaidInitViewBox
+      if (!init) return
+      wrap.__mermaidCurViewBox = init.slice()
+      setSvgViewBox(svg, init)
+    }
+
+    svg.addEventListener('pointerdown', onPointerDown)
+    svg.addEventListener('pointermove', onPointerMove)
+    svg.addEventListener('pointerup', onPointerUpOrCancel)
+    svg.addEventListener('pointercancel', onPointerUpOrCancel)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('dblclick', onDblClick)
+  }
+
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+
+      // Clear old render (themeChange/pjax will rerun)
+      const oldSvg = item.querySelector('svg')
+      if (oldSvg) oldSvg.remove()
+      item.__mermaidGestureBound = false
+
+      const config = mermaidSrc.dataset.config ? JSON.parse(mermaidSrc.dataset.config) : {}
+      if (!config.theme) {
+        config.theme = theme
+      }
+      const mermaidThemeConfig = `%%{init: ${JSON.stringify(config)}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+        if (true) initMermaidGestures(item)
+        item.__mermaidOriginalSvg = svg
+        if (true) attachMermaidViewerButton(item)
+      }
+
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (false) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid@11.12.2/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/fireworks.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div>
+        <style>
+            [bg-lazy] {
+                background-image: none !important;
+                background-color: #eee !important;
+            }
+        </style>
+        <script>
+            window.imageLazyLoadSetting = {
+                isSPA: false,
+                preloadRatio: 1,
+                processImages: null,
+            };
+        </script><script>window.addEventListener("load",function(){var t=/\.(gif|jpg|jpeg|tiff|png)$/i,r=/^data:image\/[a-z\d\-\.\+]+;base64,/;Array.prototype.slice.call(document.querySelectorAll("img[data-original]")).forEach(function(a){var e=a.parentNode;"A"===e.tagName&&(t.test(e.href)||r.test(e.href))&&(e.href=a.dataset.original)})});</script><script>(r=>{r.imageLazyLoadSetting.processImages=t;var a=r.imageLazyLoadSetting.isSPA,o=r.imageLazyLoadSetting.preloadRatio||1,d=i();function i(){var t=Array.prototype.slice.call(document.querySelectorAll("img[data-original]")),e=Array.prototype.slice.call(document.querySelectorAll("[bg-lazy]"));return t.concat(e)}function t(t){(a||t)&&(d=i());for(var e,n=0;n<d.length;n++)0<=(e=(e=d[n]).getBoundingClientRect()).bottom&&0<=e.left&&e.top<=(r.innerHeight*o||document.documentElement.clientHeight*o)&&(()=>{var t,e,a,o,i=d[n];e=function(){d=d.filter(function(t){return i!==t}),r.imageLazyLoadSetting.onImageLoaded&&r.imageLazyLoadSetting.onImageLoaded(i)},(t=i).dataset.loaded||(t.hasAttribute("bg-lazy")?(t.removeAttribute("bg-lazy"),e&&e()):(a=new Image,o=t.getAttribute("data-original"),a.onload=function(){t.src=o,t.removeAttribute("data-original"),t.setAttribute("data-loaded",!0),e&&e()},a.onerror=function(){t.removeAttribute("data-original"),t.setAttribute("data-loaded",!1),t.src=o},t.src!==o&&(a.src=o)))})()}function e(){clearTimeout(t.tId),t.tId=setTimeout(t,500)}t(),document.addEventListener("scroll",e),r.addEventListener("resize",e),r.addEventListener("orientationchange",e)})(this);</script></body></html>
